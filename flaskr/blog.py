@@ -2,7 +2,6 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, url_for
 )
 from werkzeug.exceptions import abort
-
 from flaskr.auth import login_required
 from flaskr.db import get_db
 
@@ -96,3 +95,9 @@ def delete(id):
     db.execute('DELETE FROM post WHERE id = ?', (id,))
     db.commit()
     return redirect(url_for('blog.index'))
+
+@bp.route('/<int:id>/details', methods=('GET',))
+@login_required
+def detail(id):
+    post = get_post(id)
+    return render_template('blog/detail.html', post=post)
