@@ -1,11 +1,13 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for
+    Blueprint, flash, g, redirect, render_template, request, url_for, current_app
 )
 from werkzeug.exceptions import abort
-
+from werkzeug.utils import secure_filename 
+import os
 from flaskr.auth import login_required
 from flaskr.db import get_db
 
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 bp = Blueprint('blog', __name__)
 
 @bp.route('/')
@@ -27,10 +29,10 @@ def create():
         title = request.form['title']
         body = request.form['body']
         error = None
-
+        if 'file' in request.files:
+            file=request.files['file']
         if not title:
             error = 'Title is required.'
-
         if error is not None:
             flash(error)
         else:
@@ -41,10 +43,14 @@ def create():
                 (title, body, g.user['id'])
             )
             db.commit()
+            if file:
+                filename = secure_filename(file.filename)
+                #this is kind of the magic - our Python function here runs on POST, and that memory can access the OS
+                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             return redirect(url_for('blog.index'))
 
     return render_template('blog/create.html')
-
+#m123
 def get_post(id, check_author=True):
     post = get_db().execute(
         'SELECT p.id, title, body, created, author_id, username'
