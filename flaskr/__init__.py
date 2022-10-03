@@ -50,11 +50,19 @@ def create_app(test_config=None):
     app.register_blueprint(auth.bp)
     app.register_blueprint(blog.bp)
     app.add_url_rule('/', endpoint='index')
-    app.add_url_rule("/uploads/<name>", endpoint="download_file", build_only=True)
-    @app.route('/uploads/<name>')
 
+    #This URL rule is to send us to download a file incase we don't get there by uploading something first
+    app.add_url_rule("/uploads/<name>", endpoint="download_file", build_only=True)
+    
+    #This is where we go after uploading - just downloads the file we just uploaded 
+    @app.route('/uploads/<name>')
     def download_file(name):
         return send_from_directory(app.config["UPLOAD_FOLDER"], name)
+    '''
+    Basically the way this works is when we GET the page return some really simple HTML (not even a template)
+    That simple HTML we returned has a little button in it for POST, and when we POST we call the little "save" operation
+    '''
+
     @app.route('/files', methods=['GET', 'POST'])
     def upload_file():
         if request.method == 'POST':
@@ -70,6 +78,7 @@ def create_app(test_config=None):
                 return redirect(request.url)
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
+                #this is kind of the magic - our Python function here runs on POST, and that memory can access the OS
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 return redirect(url_for('download_file', name=filename))
         return '''
