@@ -2,8 +2,12 @@ import os
 
 from flask import Flask, flash, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
+path = os.getcwd()
+# file Upload
 
-UPLOAD_FOLDER = '/path/to/the/uploads'
+UPLOAD_FOLDER = os.path.join(path, 'uploads')
+if not os.path.isdir(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
 def create_app(test_config=None):
@@ -51,7 +55,7 @@ def create_app(test_config=None):
 
     def download_file(name):
         return send_from_directory(app.config["UPLOAD_FOLDER"], name)
-    @app.route('/', methods=['GET', 'POST'])
+    @app.route('/files', methods=['GET', 'POST'])
     def upload_file():
         if request.method == 'POST':
             # check if the post request has the file part
