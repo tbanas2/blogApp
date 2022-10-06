@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import os
 from flaskr.auth import login_required
 from flaskr.db import get_db
+from base64 import b64encode
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 bp = Blueprint('blog', __name__)
@@ -31,6 +32,7 @@ def create():
         error = None
         if 'file' in request.files:
             file=request.files['file']
+            data =file.read()
         if not title:
             error = 'Title is required.'
         if error is not None:
@@ -104,3 +106,13 @@ def delete(id):
     db.execute('DELETE FROM post WHERE id = ?', (id,))
     db.commit()
     return redirect(url_for('blog.index'))
+
+def render_picture(data):
+    render_pic = b64encode(data).decode('ascii') 
+    return render_pic
+
+@bp.route('/<int:id>/details', methods=('GET',))
+@login_required
+def detail(id):
+    post = get_post(id)
+    return render_template('blog/detail.html', post=post)
