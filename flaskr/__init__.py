@@ -1,8 +1,14 @@
 import os
 
-from flask import Flask
+from flask import Flask, flash, request, redirect, url_for, send_from_directory
+from werkzeug.utils import secure_filename
+path = os.getcwd()
+# file Upload
 
-
+UPLOAD_FOLDER = os.path.join(path, 'uploads')
+if not os.path.isdir(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
 def create_app(test_config=None):
     # create and configure the app
@@ -10,6 +16,8 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
+        UPLOAD_FOLDER=UPLOAD_FOLDER,
+        MAX_CONTENT_LENGTH=16*1000*1000
     )
 
     if test_config is None:
@@ -43,5 +51,52 @@ def create_app(test_config=None):
     app.register_blueprint(blog.bp)
     app.add_url_rule('/', endpoint='index')
 
+    #This URL rule is to send us to download a file incase we don't get there by uploading something first
+    app.add_url_rule("/uploads/<name>", endpoint="download_file", build_only=True)
+    
+    #This is where we go after uploading - just downloads the file we just uploaded 
+    @app.route('/uploads/<name>')
+    def download_file(name):
+        return send_from_directory(app.config["UPLOAD_FOLDER"], name)
+    '''
+    Basically the way this works is when we GET the page return some really simple HTML (not even a template)
+    That simple HTML we returned has a little button in it for POST, and when we POST we call the little "save" operation
+    '''
+
+    @app.route('/files', methods=['GET', 'POST'])
+    def upload_file():
+        if request.method == 'POST':
+            # check if the post request has the file part
+            if 'file' not in request.files:
+                flash('No file part')
+                return redirect(request.url)
+            file = request.files['file']
+            # If the user does not select a file, the browser submits an
+            # empty file without a filename.
+            if file.filename == '':
+                flash('No selected file')
+                return redirect(request.url)
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                #this is kind of the magic - our Python function here runs on POST, and that memory can access the OS
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                return redirect(url_for('download_file', name=filename))
+        return '''
+        <!doctype html>
+        <title>Upload new File</title>
+        <h1>Upload new File</h1>
+        <form method=post enctype=multipart/form-data>
+        <input type=file name=file>
+        <input type=submit value=Upload>
+        </form>
+        '''
     return app
-#changed5
+
+    
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+    
