@@ -36,17 +36,19 @@ def create():
         if error is not None:
             flash(error)
         else:
-            db = get_db()
-            db.execute(
-                'INSERT INTO post (title, body, author_id)'
-                ' VALUES (?, ?, ?)',
-                (title, body, g.user['id'])
-            )
-            db.commit()
             if file:
                 filename = secure_filename(file.filename)
                 #this is kind of the magic - our Python function here runs on POST, and that memory can access the OS
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+            db = get_db()
+            db.execute(
+                'INSERT INTO post (title, body, author_id, pic)'
+                ' VALUES (?, ?, ?, ?)',
+                (title, body, g.user['id'], filename)
+            )
+            db.commit()
+            
             return redirect(url_for('blog.index'))
 
     return render_template('blog/create.html')
