@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import os
 from flaskr.auth import login_required
 from flaskr.db import get_db
+from base64 import b64encode
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 bp = Blueprint('blog', __name__)
@@ -31,22 +32,26 @@ def create():
         error = None
         if 'file' in request.files:
             file=request.files['file']
+            data =file.read()
         if not title:
             error = 'Title is required.'
         if error is not None:
             flash(error)
         else:
             db = get_db()
-            db.execute(
-                'INSERT INTO post (title, body, author_id)'
-                ' VALUES (?, ?, ?)',
-                (title, body, g.user['id'])
-            )
-            db.commit()
             if file:
-                filename = secure_filename(file.filename)
-                #this is kind of the magic - our Python function here runs on POST, and that memory can access the OS
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                render_file = render_picture(data)
+                db.execute(
+                    'INSERT INTO post (title, body, author_id, pic)'
+                    ' VALUES (?, ?, ?, ?)',
+                    (title, body, g.user['id'], render_file))
+            else:
+                db.execute(
+                    'INSERT INTO post (title, body, author_id)'
+                    ' VALUES (?, ?, ?)',
+                    (title, body, g.user['id']))
+            db.commit()
+            
             return redirect(url_for('blog.index'))
 
     return render_template('blog/create.html')
@@ -102,3 +107,7 @@ def delete(id):
     db.execute('DELETE FROM post WHERE id = ?', (id,))
     db.commit()
     return redirect(url_for('blog.index'))
+
+def render_picture(data):
+    render_pic = b64encode(data).decode('ascii') 
+    return render_pic
