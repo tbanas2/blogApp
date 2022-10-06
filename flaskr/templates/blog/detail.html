@@ -9,6 +9,7 @@
     <h1>{{ post['title'] }}</h1>
     <h1>Text:</h1>
     <p class="body">{{ post['body'] }}</p>
+    <img src="{{url_for('download_file', name=post['pic']) }}"/>
   </form>
   <hr>
   <form action="{{ url_for('blog.delete', id=post['id']) }}" method="post">
